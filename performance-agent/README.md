@@ -12,10 +12,11 @@ Step 2: Install dependencies
 pip install -r requirements.txt
 ```
 
-Step 3: Set your Groq API key
+Step 3: (Optional) Set your Groq API key for LLM synthesis
 ```bash
 export GROQ_API_KEY=your_key_here
 ```
+If unset, the Synthesis Agent still runs fully using local cross-agent analysis.
 
 Step 4: Start the backend
 ```bash

@@ -591,10 +591,7 @@ def synthesise(
 
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
-        print(
-            "[synthesis_agent] GROQ_API_KEY not set — "
-            "using local synthesis agent (no Anthropic dependency)"
-        )
+        print("[synthesis_agent] GROQ_API_KEY not set — using local synthesis agent")
         return local
 
     prompt = _build_prompt(
@@ -648,9 +645,9 @@ def synthesise(
             ),
         }
 
-        # Reject any model output that still mentions Anthropic/API key setup
+        # Reject any model output that mentions missing API keys
         blob = json.dumps(result).upper()
-        if "ANTHROPIC" in blob or "API_KEY IS NOT SET" in blob:
+        if "API_KEY IS NOT SET" in blob or "ENABLE AI SYNTHESIS" in blob:
             print("[synthesis_agent] Rejected API text mentioning keys; using local synthesis")
             return local
 

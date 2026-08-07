@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Performance Intelligence Agent</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.5/babel.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.15.0/umd/Recharts.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap');
+
+    :root {
+      --navy: #1e2a3a;
+      --navy-deep: #15202b;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-orange: #d97706;
+      --accent-purple: #7c3aed;
+      --surface: #f3f6f9;
+      --ink: #1a2332;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'DM Sans', sans-serif;
+      background:
+        radial-gradient(ellipse 80% 50% at 10% -10%, rgba(37, 99, 235, 0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 90% 0%, rgba(5, 150, 105, 0.06), transparent),
+        linear-gradient(180deg, #e8eef4 0%, var(--surface) 40%, #eef2f6 100%);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    .brand-title {
+      font-family: 'Source Serif 4', Georgia, serif;
+      letter-spacing: -0.02em;
+    }
+
+    .score-ring {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: conic-gradient(var(--ring-color) calc(var(--score) * 1%), #e5e7eb 0);
+      box-shadow: inset 0 0 0 12px #fff;
+    }
+
+    .score-ring::before {
+      content: '';
+      position: absolute;
+      inset: 14px;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .score-ring-inner {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+
+    .agent-line {
+      animation: fadeSlideIn 0.45s ease both;
+    }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+
+    .finding-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .finding-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    }
+
+    .rec-card {
+      animation: fadeSlideIn 0.5s ease both;
+    }
+
+    .employee-row:hover {
+      background: #f0f5fb;
+    }
+
+    .employee-row.selected {
+      background: #e8f0fe;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+    const {
+      BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+      ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell, Area, ComposedChart,
+      Legend
+    } = Recharts;
+
+    const API_BASE = "http://localhost:8000";
+
+    const AGENT_SEQUENCE = [
+      {
+        key: "loader",
+        pending: "⚡ Data Loader — Retrieving employee data across all datasets...",
+        done: (data) => "✅ Data Loader — Employee found across 4 datasets",
+      },
+      {
+        key: "ticket",
+        pending: "⚡ Ticket Agent — Analysing ServiceNow performance data...",
+        done: (data) => `✅ Ticket Agent — ${data?.ticket_result?.metrics?.total_tickets ?? 0} tickets analysed`,
+      },
+      {
+        key: "quality",
+        pending: "⚡ Quality Agent — Reviewing quality scores and error patterns...",
+        done: (data) => `✅ Quality Agent — ${data?.quality_result?.metrics?.monthly_scores?.length ?? 0} months of data reviewed`,
+      },
+      {
+        key: "leave",
+        pending: "⚡ Leave Agent — Checking attendance patterns...",
+        done: (data) => `✅ Leave Agent — ${data?.leave_result?.metrics?.total_leave_days ?? 0} leave records analysed`,
+      },
+      {
+        key: "cab",
+        pending: "⚡ CAB Agent — Reviewing CAB compliance records...",
+        done: (data) => `✅ CAB Agent — ${data?.cab_result?.metrics?.total_scheduled ?? 0} CAB sessions reviewed`,
+      },
+      {
+        key: "synthesis",
+        pending: "⚡ Synthesis Agent — Cross-referencing all findings with AI analysis...",
+        done: () => "✅ Synthesis Agent — Analysis complete",
+      },
+    ];
+
+    function scoreColor(score) {
+      if (score >= 80) return "#059669";
+      if (score >= 60) return "#d97706";
+      return "#dc2626";
+    }
+
+    function tierColor(score) {
+      return scoreColor(score);
+    }
+
+    function classifyFinding(text) {
+      const t = (text || "").toLowerCase();
+      if (
+        t.includes("significantly") ||
+        t.includes("breach") ||
+        t.includes("no show") ||
+        t.includes("below target") ||
+        t.includes("below the") ||
+        t.includes("declining")
+      ) {
+        return "red";
+      }
+      if (
+        t.includes("above average") ||
+        t.includes("pattern") ||
+        t.includes("trend") ||
+        t.includes("above team") ||
+        t.includes("% above")
+      ) {
+        return "amber";
+      }
+      return "green";
+    }
+
+    function findingStyles(level) {
+      if (level === "red") {
+        return { bg: "bg-red-50", border: "border-red-200", text: "text-red-800", label: "text-red-600" };
+      }
+      if (level === "amber") {
+        return { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-900", label: "text-amber-700" };
+      }
+      return { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-900", label: "text-emerald-700" };
+    }
+
+    function MetricPill({ label, value, accent }) {
+      return (
+        <div className="flex flex-col min-w-0">
+          <span className="text-[11px] uppercase tracking-wide text-slate-500 font-medium">{label}</span>
+          <span className={`text-lg font-semibold truncate ${accent || "text-slate-800"}`}>{value}</span>
+        </div>
+      );
+    }
+
+    function Header() {
+      return (
+        <header className="bg-[#1e2a3a] text-white py-10 px-4 shadow-lg relative overflow-hidden">
+          <div className="absolute inset-0 opacity-30"
+               style={{ background: "radial-gradient(circle at 20% 20%, rgba(96,165,250,0.25), transparent 45%), radial-gradient(circle at 80% 0%, rgba(52,211,153,0.15), transparent 40%)" }} />
+          <div className="relative max-w-6xl mx-auto text-center">
+            <h1 className="brand-title text-3xl md:text-5xl font-bold mb-3">Performance Intelligence Agent</h1>
+            <p className="text-slate-200 text-base md:text-lg max-w-3xl mx-auto">
+              Multi-Agent Employee Performance Analysis System — Arch Global Services
+            </p>
+            <p className="mt-3 text-sm text-slate-300 tracking-wide">
+              Powered by 6 AI Agents working in coordination
+            </p>
+          </div>
+        </header>
+      );
+    }
+
+    function EmployeeSearch({ employees, selected, onSelect, onClear, onAnalyse, loading, backendError }) {
+      const [query, setQuery] = useState("");
+
+      const filtered = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        if (!q) return employees;
+        return employees.filter((e) => e.toLowerCase().includes(q));
+      }, [employees, query]);
+
+      return (
+        <section className="max-w-3xl mx-auto -mt-6 relative z-10 px-4">
+          <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-6 md:p-8">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">Select Employee for Analysis</h2>
+
+            {backendError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">
+                {backendError}
+              </div>
+            )}
+
+            {selected ? (
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 bg-[#1e2a3a] text-white px-4 py-2 rounded-lg">
+                  <span className="font-medium">{selected}</span>
+                  <button
+                    type="button"
+                    onClick={() => { console.log("[UI] Cleared employee selection"); onClear(); }}
+                    className="ml-1 w-6 h-6 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-sm"
+                    aria-label="Clear selection"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={onAnalyse}
+                    className="bg-[#1e2a3a] hover:bg-[#15202b] disabled:opacity-60 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center gap-3 transition"
+                  >
+                    {loading && <span className="spinner" />}
+                    {loading ? "Analysing..." : "Analyse Performance"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Type employee name to search..."
+                  className="w-full border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#1e2a3a]/40 focus:border-[#1e2a3a] mb-3"
+                />
+                <div className="border border-slate-200 rounded-lg max-h-64 overflow-y-auto">
+                  {filtered.length === 0 ? (
+                    <div className="px-4 py-6 text-slate-500 text-sm text-center">No employees found</div>
+                  ) : (
+                    filtered.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className="employee-row w-full text-left px-4 py-3 border-b border-slate-100 last:border-0 text-slate-800"
+                        onClick={() => {
+                          console.log("[UI] Selected employee:", name);
+                          onSelect(name);
+                          setQuery("");
+                        }}
+                      >
+                        {name}
+                      </button>
+                    ))
+                  )}
+                </div>
+                <button
+                  type="button"
+                  disabled
+                  className="mt-4 bg-[#1e2a3a] opacity-40 text-white px-6 py-3 rounded-lg font-medium cursor-not-allowed"
+                >
+                  Analyse Performance
+                </button>
+              </>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    function AgentActivityLog({ visible, resultData, animationDone }) {
+      const [lines, setLines] = useState([]);
+      const resultRef = useRef(null);
+      const finishedRef = useRef(false);
+
+      useEffect(() => {
+        resultRef.current = resultData;
+      }, [resultData]);
+
+      useEffect(() => {
+        if (!visible) {
+          setLines([]);
+          finishedRef.current = false;
+          return;
+        }
+
+        let cancelled = false;
+        finishedRef.current = false;
+        setLines([]);
+
+        const waitForResult = async () => {
+          const start = Date.now();
+          while (!resultRef.current && Date.now() - start < 120000) {
+            await new Promise((r) => setTimeout(r, 100));
+            if (cancelled) return null;
+          }
+          return resultRef.current;
+        };
+
+        const run = async () => {
+          for (let i = 0; i < AGENT_SEQUENCE.length; i++) {
+            if (cancelled) return;
+            const step = AGENT_SEQUENCE[i];
+            setLines((prev) => [...prev, { key: step.key, text: step.pending, done: false }]);
+            console.log("[AgentLog]", step.pending);
+
+            await new Promise((r) => setTimeout(r, 600));
+            if (cancelled) return;
+
+            // Final synthesis line waits for API payload so counts/status are real
+            if (i === AGENT_SEQUENCE.length - 1) {
+              await waitForResult();
+            }
+
+            const data = resultRef.current;
+            const doneText = step.done(data);
+            setLines((prev) =>
+              prev.map((line) =>
+                line.key === step.key ? { ...line, text: doneText, done: true } : line
+              )
+            );
+            console.log("[AgentLog]", doneText);
+          }
+
+          // Ensure API finished before revealing dashboard
+          const finalData = await waitForResult();
+          if (!cancelled && !finishedRef.current && finalData) {
+            finishedRef.current = true;
+            if (animationDone) animationDone();
+          }
+        };
+
+        run();
+        return () => { cancelled = true; };
+      }, [visible]);
+
+      // Refresh completed line labels once real result arrives (counts)
+      useEffect(() => {
+        if (!visible || !resultData) return;
+        setLines((prev) =>
+          prev.map((line) => {
+            if (!line.done) return line;
+            const step = AGENT_SEQUENCE.find((s) => s.key === line.key);
+            return step ? { ...line, text: step.done(resultData) } : line;
+          })
+        );
+      }, [resultData, visible]);
+
+      if (!visible) return null;
+
+      return (
+        <section className="max-w-3xl mx-auto mt-8 px-4">
+          <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Agent Activity — Live
+            </h3>
+            <div className="space-y-3 font-mono text-sm">
+              {lines.map((line) => (
+                <div
+                  key={line.key}
+                  className={`agent-line px-3 py-2 rounded-md ${
+                    line.done ? "bg-emerald-50 text-emerald-800" : "bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  {line.text}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function OverallScoreCard({ data }) {
+      const synth = data.synthesis || {};
+      const score = Number(synth.overall_score || 0);
+      const color = scoreColor(score);
+      const breakdown = synth.score_breakdown || {};
+
+      return (
+        <section className="max-w-6xl mx-auto mt-10 px-4">
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 md:p-10">
+            <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+              <div className="flex flex-col items-center">
+                <div
+                  className="score-ring"
+                  style={{ "--score": score, "--ring-color": color }}
+                >
+                  <div className="score-ring-inner">
+                    <div className="text-4xl font-bold" style={{ color }}>{score}</div>
+                    <div className="text-xs text-slate-500 mt-1">/ 100</div>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm font-medium text-slate-600">Overall Performance Score</p>
+              </div>
+
+              <div className="flex-1 w-full">
+                <div
+                  className="inline-block px-4 py-2 rounded-lg text-white font-semibold text-lg mb-3"
+                  style={{ background: color }}
+                >
+                  {synth.performance_tier || "N/A"}
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">{data.employee_name}</h2>
+                <p className="text-slate-500 mb-6">Analysis Period: April — September 2024</p>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    ["Tickets", breakdown.ticket_score],
+                    ["Quality", breakdown.quality_score],
+                    ["Attendance", breakdown.leave_score],
+                    ["CAB", breakdown.cab_score],
+                  ].map(([label, val]) => (
+                    <div key={label} className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-3 text-center">
+                      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
+                      <div className="text-xl font-semibold text-slate-800 mt-1">{val ?? 0}<span className="text-sm text-slate-400">/25</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function TicketCard({ result }) {
+      const m = result?.metrics || {};
+      const volume = m.monthly_volume || [];
+      const sla = m.monthly_sla || [];
+      const breaches = m.breach_by_month || [];
+      const breachMonths = new Set(
+        [...breaches].sort((a, b) => b.breaches - a.breaches).slice(0, 2).map((b) => b.month)
+      );
+
+      const volumeData = volume.map((v) => ({
+        ...v,
+        fill: breachMonths.has(v.month) ? "#ef4444" : "#3b82f6",
+      }));
+
+      return (
+        <div className="bg-white rounded-xl shadow-md border border-blue-100 overflow-hidden">
+          <div className="bg-blue-600 text-white px-5 py-3 font-semibold">ServiceNow Ticket Performance</div>
+          <div className="p-5 space-y-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <MetricPill label="Total Tickets" value={m.total_tickets ?? 0} accent="text-blue-700" />
+              <MetricPill label="SLA Met %" value={`${m.sla_met_pct ?? 0}%`} accent="text-blue-700" />
+              <MetricPill label="SLA Breach %" value={`${m.sla_breach_pct ?? 0}%`} accent="text-red-600" />
+              <MetricPill label="Avg TAT" value={`${m.avg_turnaround ?? 0}h`} accent="text-blue-700" />
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold text-slate-700 mb-2">Monthly Ticket Volume</h4>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={volumeData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" name="Tickets" radius={[4, 4, 0, 0]}>
+                      {volumeData.map((entry, index) => (
+                        <Cell key={`v-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold text-slate-700 mb-2">SLA Performance Trend</h4>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={sla}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <ReferenceLine
+                      y={m.team_avg_sla_pct || 0}
+                      stroke="#ef4444"
+                      strokeDasharray="4 4"
+                      label={{ value: "Team Avg", fill: "#ef4444", fontSize: 10 }}
+                    />
+                    <Line type="monotone" dataKey="pct" name="SLA %" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function QualityCard({ result }) {
+      const m = result?.metrics || {};
+      const monthly = m.monthly_scores || [];
+      const trend = m.quality_trend || "Stable";
+      const arrow = trend === "Improving" ? "↑" : trend === "Declining" ? "↓" : "→";
+
+      return (
+        <div className="bg-white rounded-xl shadow-md border border-emerald-100 overflow-hidden">
+          <div className="bg-emerald-600 text-white px-5 py-3 font-semibold">Quality Performance</div>
+          <div className="p-5 space-y-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <MetricPill label="Avg Score" value={`${m.avg_quality_score ?? 0}%`} accent="text-emerald-700" />
+              <MetricPill label="Target" value="95%" accent="text-slate-700" />
+              <MetricPill label="Team Avg" value={`${m.team_avg_quality ?? 0}%`} accent="text-slate-700" />
+              <MetricPill label="Total Errors" value={m.total_errors ?? 0} accent="text-emerald-700" />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {m.primary_error_type && (
+                <span className="inline-flex items-center px-3 py-1 rounded-md bg-emerald-50 text-emerald-800 text-sm border border-emerald-200">
+                  Primary Error: {m.primary_error_type}
+                </span>
+              )}
+              <span className="inline-flex items-center px-3 py-1 rounded-md bg-slate-100 text-slate-800 text-sm font-medium">
+                Trend {arrow} {trend}
+              </span>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold text-slate-700 mb-2">Quality Score by Month</h4>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={monthly}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis domain={[80, 100]} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <ReferenceLine y={95} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "Target 95%", fill: "#ef4444", fontSize: 10 }} />
+                    <Line type="monotone" dataKey="team_avg" name="Team Avg" stroke="#94a3b8" strokeWidth={2} dot={false} />
+                    <Area type="monotone" dataKey="score" fill="rgba(239,68,68,0.08)" stroke="none" />
+                    <Line type="monotone" dataKey="score" name="Score" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function LeaveCard({ result }) {
+      const m = result?.metrics || {};
+      const pieData = [
+        { name: "Sick", value: m.sick_days || 0, color: "#f97316" },
+        { name: "Casual", value: m.casual_days || 0, color: "#fb923c" },
+        { name: "Annual", value: m.annual_days || 0, color: "#fdba74" },
+      ].filter((d) => d.value > 0);
+
+      const leaveByMonth = (m.leave_by_month || []).map((row) => ({
+        month: row.month,
+        count: row.count,
+      }));
+
+      const mondayHigh = (m.monday_pct || 0) > 40;
+
+      return (
+        <div className="bg-white rounded-xl shadow-md border border-orange-100 overflow-hidden">
+          <div className="bg-orange-500 text-white px-5 py-3 font-semibold">Leave and Attendance</div>
+          <div className="p-5 space-y-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <MetricPill label="Total Days" value={m.total_leave_days ?? 0} accent="text-orange-700" />
+              <MetricPill label="Sick" value={m.sick_days ?? 0} accent="text-orange-700" />
+              <MetricPill label="Casual" value={m.casual_days ?? 0} accent="text-orange-700" />
+              <MetricPill label="Annual" value={m.annual_days ?? 0} accent="text-orange-700" />
+            </div>
+
+            <div className={`text-sm font-medium px-3 py-2 rounded-md inline-block ${
+              mondayHigh ? "bg-amber-100 text-amber-900" : "bg-slate-100 text-slate-700"
+            }`}>
+              Monday Leaves: {m.monday_pct ?? 0}% of total
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-700 mb-2">Leave Type Breakdown</h4>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={70} paddingAngle={3}>
+                        {pieData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-slate-700 mb-2">Leave by Month</h4>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={leaveByMonth}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" name="Days" fill="#f97316" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function CabCard({ result }) {
+      const m = result?.metrics || {};
+      const monthly = (m.monthly_attendance || []).map((row) => ({
+        ...row,
+        fill: (row.no_shows || 0) > 0 ? "#ef4444" : "#8b5cf6",
+      }));
+
+      return (
+        <div className="bg-white rounded-xl shadow-md border border-violet-100 overflow-hidden">
+          <div className="bg-violet-600 text-white px-5 py-3 font-semibold">CAB Compliance</div>
+          <div className="p-5 space-y-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <MetricPill label="Scheduled" value={m.total_scheduled ?? 0} accent="text-violet-700" />
+              <MetricPill label="Attended %" value={`${m.attendance_pct ?? 0}%`} accent="text-violet-700" />
+              <MetricPill
+                label="No Shows"
+                value={m.no_show_count ?? 0}
+                accent={(m.no_show_count || 0) > 2 ? "text-red-600" : "text-violet-700"}
+              />
+              <MetricPill label="Cancellations" value={m.cancellation_count ?? 0} accent="text-violet-700" />
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold text-slate-700 mb-2">Monthly Attendance %</h4>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthly}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <ReferenceLine
+                      y={m.team_avg_attendance || 0}
+                      stroke="#ef4444"
+                      strokeDasharray="4 4"
+                      label={{ value: "Team Avg", fill: "#ef4444", fontSize: 10 }}
+                    />
+                    <Bar dataKey="pct" name="Attendance %" radius={[4, 4, 0, 0]}>
+                      {monthly.map((entry, index) => (
+                        <Cell key={`c-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function SynthesisPanel({ synthesis }) {
+      const recs = synthesis?.recommendations || [];
+      const borders = ["border-red-500", "border-amber-500", "border-blue-500"];
+      const labels = ["Urgent", "Important", "Development"];
+
+      return (
+        <section className="max-w-6xl mx-auto mt-8 px-4">
+          <div className="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden">
+            <div className="bg-[#1e2a3a] text-white px-6 py-4 font-semibold text-lg">
+              AI Synthesis — Cross-Agent Analysis
+            </div>
+            <div className="p-6 grid md:grid-cols-5 gap-8">
+              <div className="md:col-span-3 space-y-6">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-800 mb-2">Correlation Analysis</h3>
+                  <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                    {synthesis?.correlation_analysis || "No correlation analysis available."}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-slate-800 mb-2">Performance Summary</h3>
+                  <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                    {synthesis?.summary_narrative || "No narrative available."}
+                  </p>
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <h3 className="text-base font-semibold text-slate-800 mb-3">Priority Recommendations</h3>
+                <div className="space-y-3">
+                  {recs.map((rec, i) => (
+                    <div
+                      key={i}
+                      className={`rec-card bg-slate-50 border border-slate-100 border-l-4 ${borders[i] || "border-slate-400"} rounded-r-lg px-4 py-3`}
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    >
+                      <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">
+                        {i + 1}. {labels[i] || "Action"}
+                      </div>
+                      <p className="text-sm text-slate-800">{rec}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function FindingsPanel({ data }) {
+      const groups = [
+        { agent: "Ticket Agent", findings: data.ticket_result?.findings || [] },
+        { agent: "Quality Agent", findings: data.quality_result?.findings || [] },
+        { agent: "Leave Agent", findings: data.leave_result?.findings || [] },
+        { agent: "CAB Agent", findings: data.cab_result?.findings || [] },
+      ];
+      const all = groups.flatMap((g) => g.findings.map((f) => ({ agent: g.agent, text: f })));
+
+      return (
+        <section className="max-w-6xl mx-auto mt-8 px-4">
+          <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">
+              Agent Findings — {all.length} findings across 4 datasets
+            </h3>
+            <div className="grid md:grid-cols-2 gap-3">
+              {all.map((item, idx) => {
+                const level = classifyFinding(item.text);
+                const styles = findingStyles(level);
+                return (
+                  <div
+                    key={idx}
+                    className={`finding-card rounded-lg border px-4 py-3 ${styles.bg} ${styles.border}`}
+                  >
+                    <div className={`text-[11px] uppercase tracking-wide font-semibold mb-1 ${styles.label}`}>
+                      {item.agent}
+                    </div>
+                    <p className={`text-sm ${styles.text}`}>{item.text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function Footer() {
+      return (
+        <footer className="mt-16 bg-[#1e2a3a] text-slate-300 text-center py-8 px-4">
+          <p className="font-medium text-white mb-1">
+            Performance Intelligence Agent — Built on Multi-Agent AI Architecture
+          </p>
+          <p className="text-sm">
+            Data Sources: ServiceNow | Quality Team | HR Leave Tracker | CAB Records
+          </p>
+        </footer>
+      );
+    }
+
+    function App() {
+      const [employees, setEmployees] = useState([]);
+      const [selected, setSelected] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [showAgentLog, setShowAgentLog] = useState(false);
+      const [result, setResult] = useState(null);
+      const [showDashboard, setShowDashboard] = useState(false);
+      const [backendError, setBackendError] = useState(null);
+      const pendingResult = useRef(null);
+
+      useEffect(() => {
+        console.log("[App] Loading employee list from backend...");
+        fetch(`${API_BASE}/employees`)
+          .then(async (res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+          })
+          .then((data) => {
+            console.log("[App] Employees loaded:", data.employees);
+            setEmployees(data.employees || []);
+            setBackendError(null);
+          })
+          .catch((err) => {
+            console.error("[App] Backend not reachable:", err);
+            setBackendError("Backend not running. Start uvicorn first.");
+          });
+      }, []);
+
+      const handleAnalyse = async () => {
+        if (!selected) return;
+        console.log("[App] Starting analysis for", selected);
+        setLoading(true);
+        setShowDashboard(false);
+        setResult(null);
+        setShowAgentLog(true);
+        setBackendError(null);
+        pendingResult.current = null;
+
+        try {
+          const res = await fetch(`${API_BASE}/analyse`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ employee_name: selected }),
+          });
+
+          if (!res.ok) {
+            const detail = await res.json().catch(() => ({}));
+            throw new Error(detail.detail || `HTTP ${res.status}`);
+          }
+
+          const data = await res.json();
+          console.log("[App] Analysis result received", data);
+          pendingResult.current = data;
+          setResult(data);
+        } catch (err) {
+          console.error("[App] Analysis failed:", err);
+          setShowAgentLog(false);
+          setLoading(false);
+          if (String(err.message || "").includes("Failed to fetch") || err.name === "TypeError") {
+            setBackendError("Backend not running. Start uvicorn first.");
+          } else {
+            setBackendError(err.message || "Analysis failed.");
+          }
+        }
+      };
+
+      const handleAnimationDone = () => {
+        console.log("[App] Agent animation complete — revealing dashboard");
+        setLoading(false);
+        setShowAgentLog(false);
+        setShowDashboard(true);
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col">
+          <Header />
+
+          <main className="flex-1 pb-8">
+            <EmployeeSearch
+              employees={employees}
+              selected={selected}
+              onSelect={setSelected}
+              onClear={() => {
+                setSelected(null);
+                setResult(null);
+                setShowDashboard(false);
+                setShowAgentLog(false);
+              }}
+              onAnalyse={handleAnalyse}
+              loading={loading}
+              backendError={backendError}
+            />
+
+            <AgentActivityLog
+              visible={showAgentLog}
+              resultData={result}
+              animationDone={handleAnimationDone}
+            />
+
+            {showDashboard && result && (
+              <>
+                <OverallScoreCard data={result} />
+                <section className="max-w-6xl mx-auto mt-8 px-4 grid md:grid-cols-2 gap-6">
+                  <TicketCard result={result.ticket_result} />
+                  <QualityCard result={result.quality_result} />
+                  <LeaveCard result={result.leave_result} />
+                  <CabCard result={result.cab_result} />
+                </section>
+                <SynthesisPanel synthesis={result.synthesis} />
+                <FindingsPanel data={result} />
+              </>
+            )}
+          </main>
+
+          <Footer />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

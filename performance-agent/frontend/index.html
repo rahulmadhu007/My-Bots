@@ -162,11 +162,13 @@
       const t = (text || "").toLowerCase();
       if (
         t.includes("significantly") || t.includes("breach") || t.includes("no show") ||
-        t.includes("below target") || t.includes("below the") || t.includes("declining")
+        t.includes("below target") || t.includes("below the") || t.includes("declining") ||
+        t.includes("without prior notice")
       ) return "red";
       if (
         t.includes("above average") || t.includes("pattern") || t.includes("trend") ||
-        t.includes("above team") || t.includes("% above")
+        t.includes("above team") || t.includes("% above") || t.includes("exceeds") ||
+        t.includes("represents")
       ) return "amber";
       return "green";
     }

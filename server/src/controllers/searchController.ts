@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { managerAgent } from '../agents/ManagerAgent.js';
 import { AppError } from '../middleware/errorHandler.js';
 import type { ApiErrorResponse, ApiSearchResponse, SearchRequestBody } from '../types/index.js';
-import { env } from '../config/env.js';
+import { env, hasRequiredSecrets } from '../config/env.js';
 
 export async function searchController(
   req: Request,
@@ -10,7 +10,7 @@ export async function searchController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    if (!env.grokApiKey || !env.youtubeApiKey) {
+    if (!hasRequiredSecrets()) {
       throw new AppError(
         'Server is missing GROK_API_KEY or YOUTUBE_API_KEY. Add them to your .env file.',
         503,
@@ -58,6 +58,7 @@ export function healthController(_req: Request, res: Response): void {
     service: 'ai-youtube-semantic-search',
     grokConfigured: Boolean(env.grokApiKey),
     youtubeConfigured: Boolean(env.youtubeApiKey),
+    ready: hasRequiredSecrets(),
     agents: managerAgent.listAgents().map((a) => ({
       name: a.name,
       description: a.description,

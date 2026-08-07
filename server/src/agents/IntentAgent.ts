@@ -56,7 +56,10 @@ export class IntentAgent extends BaseAgent<AgentContext, IntentResult> {
       return this.ok(normalized, 'AI is understanding your request...');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Intent analysis failed';
-      return this.fail(message, 'Could not understand your request');
+      const friendly = /api key|unauthorized|401|403/i.test(message)
+        ? 'AI service authentication failed. Check GROK_API_KEY.'
+        : 'Could not understand your request. Please try rephrasing.';
+      return this.fail(message, friendly);
     }
   }
 }

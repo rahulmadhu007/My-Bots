@@ -8,25 +8,30 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
-function required(name: string, fallback?: string): string {
-  const value = process.env[name] ?? fallback;
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
-}
-
 function optional(name: string, fallback: string): string {
   return process.env[name] ?? fallback;
 }
 
+function isUsableSecret(value: string | undefined): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized.includes('your_') || normalized.includes('changeme') || normalized.includes('example')) {
+    return false;
+  }
+  return true;
+}
+
+const rawGrokKey = process.env.GROK_API_KEY ?? '';
+const rawYoutubeKey = process.env.YOUTUBE_API_KEY ?? '';
+
 export const env = {
   port: Number(optional('PORT', '3001')),
   clientOrigin: optional('CLIENT_ORIGIN', 'http://localhost:5173'),
-  grokApiKey: process.env.GROK_API_KEY ?? '',
+  grokApiKey: isUsableSecret(rawGrokKey) ? rawGrokKey.trim() : '',
   grokBaseUrl: optional('GROK_BASE_URL', 'https://api.x.ai/v1'),
   grokModel: optional('GROK_MODEL', 'grok-2-latest'),
-  youtubeApiKey: process.env.YOUTUBE_API_KEY ?? '',
+  youtubeApiKey: isUsableSecret(rawYoutubeKey) ? rawYoutubeKey.trim() : '',
   nodeEnv: optional('NODE_ENV', 'development'),
 };
 
@@ -39,7 +44,6 @@ export function assertRuntimeSecrets(): void {
   }
 }
 
-export function requireSecrets(): void {
-  required('GROK_API_KEY', env.grokApiKey || undefined);
-  required('YOUTUBE_API_KEY', env.youtubeApiKey || undefined);
+export function hasRequiredSecrets(): boolean {
+  return Boolean(env.grokApiKey && env.youtubeApiKey);
 }

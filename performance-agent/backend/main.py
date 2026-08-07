@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+# Load GROQ_API_KEY from performance-agent/.env (if present)
+_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_ENV_PATH)
 
 import data_loader
 from orchestrator import analyse_employee

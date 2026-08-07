@@ -10,9 +10,14 @@ from __future__ import annotations
 import json
 import os
 import re
+from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+from dotenv import load_dotenv
 from groq import Groq
+
+# Ensure .env is loaded even if this module is imported first
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 
 def _clamp(value: float, low: float = 0, high: float = 100) -> float:

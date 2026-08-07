@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --bg: #0a0f1a;
+  --fg: #f4f6fb;
+  --muted: #9aa9c9;
+  --surface: rgba(17, 24, 39, 0.72);
+  --border: rgba(154, 169, 201, 0.16);
+  --accent: #3dd6c6;
+  --accent-deep: #1aa89a;
+  --danger: #ff6b4a;
+}
+
+html.light {
+  color-scheme: light;
+  --bg: #f4f6fb;
+  --fg: #111827;
+  --muted: #4a5f8f;
+  --surface: rgba(255, 255, 255, 0.78);
+  --border: rgba(54, 72, 114, 0.14);
+  --accent: #1aa89a;
+  --accent-deep: #0f7f74;
+  --danger: #e25535;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'DM Sans', sans-serif;
+}
+
+@layer components {
+  .glass {
+    @apply border backdrop-blur-xl;
+    background: var(--surface);
+    border-color: var(--border);
+  }
+
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2;
+    --tw-ring-offset-color: var(--bg);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(154, 169, 201, 0.35);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

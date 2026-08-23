@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FORGE — Premium Isolate</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Figtree:wght@400;500;600&family=Syne:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <canvas id="scene" aria-hidden="true"></canvas>
+
+    <header class="site-header">
+      <a class="logo" href="#top">FORGE</a>
+      <nav class="nav">
+        <a href="#formula">Formula</a>
+        <a href="#craft">Craft</a>
+        <a href="#order" class="nav-cta">Reserve</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" data-stage="hero">
+        <div class="hero-copy">
+          <p class="brand">FORGE</p>
+          <h1>Quiet power. Uncompromising protein.</h1>
+          <p class="lede">
+            Grass-fed isolate, cold-filtered and finished like a house
+            staple — made for the long block, not the hype cycle.
+          </p>
+          <div class="cta-row">
+            <a class="btn primary" href="#order">Reserve FORGE</a>
+            <a class="btn ghost" href="#formula">Explore the formula</a>
+          </div>
+        </div>
+        <div class="scroll-hint" aria-hidden="true">
+          <span>Scroll</span>
+          <div class="scroll-line"></div>
+        </div>
+      </section>
+
+      <section id="formula" class="panel formula" data-stage="formula">
+        <div class="atmosphere" aria-hidden="true">
+          <img
+            src="/atmosphere-powder.jpg"
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+        <div class="panel-copy">
+          <p class="eyebrow">The formula</p>
+          <h2>25g isolate. Nothing ornamental.</h2>
+          <p>
+            Each scoop delivers pure whey isolate with digestive enzymes and
+            electrolytes — precision nutrition with a quiet finish.
+          </p>
+          <ul class="stat-list">
+            <li>
+              <span class="stat-num">25g</span>
+              <span class="stat-label">protein per scoop</span>
+            </li>
+            <li>
+              <span class="stat-num">1.2g</span>
+              <span class="stat-label">carbs · low sugar</span>
+            </li>
+            <li>
+              <span class="stat-num">0</span>
+              <span class="stat-label">artificial dyes</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="craft" class="panel craft" data-stage="craft">
+        <div class="atmosphere atmosphere-right" aria-hidden="true">
+          <img
+            src="/atmosphere-train.jpg"
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+        <div class="panel-copy">
+          <p class="eyebrow">The craft</p>
+          <h2>Cold-filtered. Lab-checked.</h2>
+          <p>
+            Batch-tested for heavy metals and banned substances. Recyclable
+            aluminum, foil-sealed, and finished with the same care as the
+            powder inside.
+          </p>
+          <ol class="steps">
+            <li><strong>Source</strong> — pasture-raised dairy, small co-ops</li>
+            <li><strong>Filter</strong> — low-temp microfiltration preserves amino profile</li>
+            <li><strong>Finish</strong> — natural flavors only, scoop included</li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="order" class="panel order" data-stage="order">
+        <div class="atmosphere atmosphere-center" aria-hidden="true">
+          <img
+            src="/atmosphere-scoop.jpg"
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+        <div class="panel-copy order-copy">
+          <p class="eyebrow">Reserve</p>
+          <h2>Begin the next cycle.</h2>
+          <p>Vanilla Forge · Cocoa Ash · Matcha Drift — 30 servings.</p>
+          <a class="btn primary large" href="#top">Order FORGE — $48</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>© FORGE Nutrition</span>
+      <span>Crafted for the long block</span>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

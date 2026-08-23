@@ -19,9 +19,9 @@ function createLabelTexture() {
   const ctx = canvas.getContext('2d');
 
   const base = ctx.createLinearGradient(0, 0, 0, 2048);
-  base.addColorStop(0, '#1c1612');
-  base.addColorStop(0.45, '#0f0d0b');
-  base.addColorStop(1, '#171310');
+  base.addColorStop(0, '#161210');
+  base.addColorStop(0.45, '#0a0908');
+  base.addColorStop(1, '#14110e');
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, 2048, 2048);
 
@@ -35,39 +35,38 @@ function createLabelTexture() {
   ctx.fillRect(0, 0, 2048, 56);
   ctx.fillRect(0, 1992, 2048, 56);
 
-  // Soft panel
-  ctx.fillStyle = 'rgba(226, 201, 137, 0.06)';
+  ctx.fillStyle = 'rgba(226, 201, 137, 0.08)';
   ctx.fillRect(180, 420, 1688, 1100);
 
-  ctx.strokeStyle = 'rgba(226, 201, 137, 0.55)';
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'rgba(226, 201, 137, 0.65)';
+  ctx.lineWidth = 5;
   ctx.strokeRect(220, 460, 1608, 1020);
 
-  ctx.strokeStyle = 'rgba(226, 201, 137, 0.22)';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(226, 201, 137, 0.28)';
+  ctx.lineWidth = 2;
   ctx.strokeRect(260, 500, 1528, 940);
 
+  // Use broadly available faces so canvas text paints even before web fonts settle
   ctx.fillStyle = '#f7f1e6';
-  ctx.font = '800 240px Syne, sans-serif';
+  ctx.font = '800 240px Syne, Arial Black, Arial, sans-serif';
   ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
   ctx.fillText('FORGE', 1024, 860);
 
   ctx.fillStyle = '#e2c989';
-  ctx.font = '600 64px Figtree, sans-serif';
-  ctx.letterSpacing = '0.35em';
+  ctx.font = '600 64px Figtree, Arial, sans-serif';
   ctx.fillText('PREMIUM ISOLATE', 1024, 980);
 
-  ctx.fillStyle = 'rgba(247, 241, 230, 0.7)';
-  ctx.font = '500 48px Figtree, sans-serif';
+  ctx.fillStyle = 'rgba(247, 241, 230, 0.78)';
+  ctx.font = '500 48px Figtree, Arial, sans-serif';
   ctx.fillText('25g PROTEIN  ·  COLD FILTERED', 1024, 1120);
 
-  ctx.fillStyle = 'rgba(226, 201, 137, 0.85)';
-  ctx.font = '600 36px Figtree, sans-serif';
+  ctx.fillStyle = 'rgba(226, 201, 137, 0.9)';
+  ctx.font = '600 36px Figtree, Arial, sans-serif';
   ctx.fillText('EST. BATCH 08  ·  GRASS FED', 1024, 1280);
 
-  // Subtle paper grain overlay
   ctx.globalCompositeOperation = 'overlay';
-  createNoise(ctx, 2048, 2048, 0.08);
+  createNoise(ctx, 2048, 2048, 0.06);
   ctx.globalCompositeOperation = 'source-over';
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -76,82 +75,61 @@ function createLabelTexture() {
   return texture;
 }
 
-function createBrushedMap() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#808080';
-  ctx.fillRect(0, 0, 512, 512);
-  for (let y = 0; y < 512; y += 1) {
-    const shade = 110 + ((Math.random() * 40) | 0);
-    ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
-    ctx.fillRect(0, y, 512, 1);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(2, 8);
-  return texture;
-}
-
 export function createProteinTub() {
   const group = new THREE.Group();
-  const brushed = createBrushedMap();
 
   const bodyMat = new THREE.MeshPhysicalMaterial({
-    color: 0x1a1714,
-    roughness: 0.38,
-    metalness: 0.72,
-    clearcoat: 0.55,
-    clearcoatRoughness: 0.28,
-    envMapIntensity: 1.35,
-    roughnessMap: brushed,
+    color: 0x11100e,
+    roughness: 0.32,
+    metalness: 0.85,
+    clearcoat: 0.7,
+    clearcoatRoughness: 0.22,
+    envMapIntensity: 1.55,
   });
 
   const goldMat = new THREE.MeshPhysicalMaterial({
-    color: 0xc9a35b,
-    roughness: 0.22,
+    color: 0xd4af6a,
+    roughness: 0.14,
     metalness: 1,
-    clearcoat: 0.8,
-    clearcoatRoughness: 0.15,
-    envMapIntensity: 1.8,
+    clearcoat: 1,
+    clearcoatRoughness: 0.08,
+    envMapIntensity: 2.4,
   });
 
   const lidMat = new THREE.MeshPhysicalMaterial({
-    color: 0xd4b06a,
-    roughness: 0.18,
-    metalness: 0.95,
+    color: 0xd8b56f,
+    roughness: 0.12,
+    metalness: 1,
     clearcoat: 1,
-    clearcoatRoughness: 0.12,
-    envMapIntensity: 2,
+    clearcoatRoughness: 0.08,
+    envMapIntensity: 2.6,
   });
 
   const pearlMat = new THREE.MeshPhysicalMaterial({
-    color: 0xf3ebe0,
-    roughness: 0.32,
-    metalness: 0.45,
-    clearcoat: 0.6,
-    clearcoatRoughness: 0.2,
-    envMapIntensity: 1.2,
+    color: 0xe8dfd2,
+    roughness: 0.28,
+    metalness: 0.55,
+    clearcoat: 0.7,
+    clearcoatRoughness: 0.16,
+    envMapIntensity: 1.4,
   });
 
   const labelMat = new THREE.MeshPhysicalMaterial({
     map: createLabelTexture(),
-    roughness: 0.48,
-    metalness: 0.18,
-    clearcoat: 0.35,
-    clearcoatRoughness: 0.4,
-    envMapIntensity: 0.9,
+    roughness: 0.42,
+    metalness: 0.22,
+    clearcoat: 0.45,
+    clearcoatRoughness: 0.35,
+    envMapIntensity: 1.05,
   });
 
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(1.14, 1.2, 2.55, 96), bodyMat);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(1.12, 1.18, 2.5, 96), bodyMat);
 
   const shell = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.152, 1.212, 2.52, 96, 1, true),
+    new THREE.CylinderGeometry(1.145, 1.205, 2.35, 96, 1, true),
     labelMat
   );
-  shell.rotation.y = Math.PI * 0.12;
+  shell.rotation.y = Math.PI * 0.35;
 
   const bottomRing = new THREE.Mesh(
     new THREE.TorusGeometry(1.18, 0.045, 24, 96),

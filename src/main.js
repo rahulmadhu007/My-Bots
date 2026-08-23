@@ -182,7 +182,7 @@ function introAnimation() {
       },
       0.12
     )
-    .to(particles.material, { opacity: 0.55, duration: 1.2 }, 0.4)
+    .to(particles.material, { opacity: 0.38, duration: 1.2 }, 0.4)
     .to('.brand', { y: 0, opacity: 1, filter: 'blur(0px)', duration: 1 }, 0.38)
     .to('.hero h1', { y: 0, opacity: 1, duration: 0.9 }, 0.52)
     .to('.lede', { y: 0, opacity: 1, duration: 0.85 }, 0.62)
@@ -372,9 +372,11 @@ function animate() {
     for (let i = 0; i < speeds.length; i += 1) {
       pos.array[i * 3 + 1] += speeds[i] * dt;
       if (pos.array[i * 3 + 1] > 3.2) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 1.8 + Math.random() * 2.4;
         pos.array[i * 3 + 1] = -1.2;
-        pos.array[i * 3] = (Math.random() - 0.5) * 5.5;
-        pos.array[i * 3 + 2] = (Math.random() - 0.5) * 3.5;
+        pos.array[i * 3] = Math.cos(angle) * radius;
+        pos.array[i * 3 + 2] = Math.sin(angle) * radius * 0.55;
       }
     }
     pos.needsUpdate = true;

@@ -79,12 +79,12 @@ export function createProteinTub() {
   const group = new THREE.Group();
 
   const bodyMat = new THREE.MeshPhysicalMaterial({
-    color: 0x11100e,
-    roughness: 0.32,
-    metalness: 0.85,
-    clearcoat: 0.7,
-    clearcoatRoughness: 0.22,
-    envMapIntensity: 1.55,
+    color: 0x0c0b0a,
+    roughness: 0.48,
+    metalness: 0.28,
+    clearcoat: 0.85,
+    clearcoatRoughness: 0.18,
+    envMapIntensity: 0.55,
   });
 
   const goldMat = new THREE.MeshPhysicalMaterial({
@@ -114,22 +114,21 @@ export function createProteinTub() {
     envMapIntensity: 1.4,
   });
 
-  const labelMat = new THREE.MeshPhysicalMaterial({
+  const labelMat = new THREE.MeshStandardMaterial({
     map: createLabelTexture(),
-    roughness: 0.42,
-    metalness: 0.22,
-    clearcoat: 0.45,
-    clearcoatRoughness: 0.35,
-    envMapIntensity: 1.05,
+    roughness: 0.62,
+    metalness: 0.05,
+    envMapIntensity: 0.35,
+    side: THREE.DoubleSide,
   });
 
   const body = new THREE.Mesh(new THREE.CylinderGeometry(1.12, 1.18, 2.5, 96), bodyMat);
 
   const shell = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.145, 1.205, 2.35, 96, 1, true),
+    new THREE.CylinderGeometry(1.148, 1.208, 2.2, 96, 1, true),
     labelMat
   );
-  shell.rotation.y = Math.PI * 0.35;
+  shell.rotation.y = Math.PI * 0.55;
 
   const bottomRing = new THREE.Mesh(
     new THREE.TorusGeometry(1.18, 0.045, 24, 96),
@@ -223,15 +222,18 @@ export function createProteinTub() {
 }
 
 export function createPowderParticles() {
-  const count = 140;
+  const count = 90;
   const positions = new Float32Array(count * 3);
   const speeds = [];
 
   for (let i = 0; i < count; i += 1) {
-    positions[i * 3] = (Math.random() - 0.5) * 5.5;
+    // Keep particles in a soft outer drift — not glued to the tub surface
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 1.8 + Math.random() * 2.4;
+    positions[i * 3] = Math.cos(angle) * radius;
     positions[i * 3 + 1] = Math.random() * 4 - 1;
-    positions[i * 3 + 2] = (Math.random() - 0.5) * 3.5;
-    speeds.push(0.15 + Math.random() * 0.35);
+    positions[i * 3 + 2] = Math.sin(angle) * radius * 0.55;
+    speeds.push(0.12 + Math.random() * 0.28);
   }
 
   const geometry = new THREE.BufferGeometry();
@@ -239,9 +241,9 @@ export function createPowderParticles() {
 
   const material = new THREE.PointsMaterial({
     color: 0xe8d7b0,
-    size: 0.035,
+    size: 0.028,
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.38,
     depthWrite: false,
     sizeAttenuation: true,
   });

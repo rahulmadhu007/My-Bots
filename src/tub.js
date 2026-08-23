@@ -1,17 +1,5 @@
 import * as THREE from 'three';
 
-function createNoise(ctx, w, h, alpha = 0.04) {
-  const img = ctx.createImageData(w, h);
-  for (let i = 0; i < img.data.length; i += 4) {
-    const v = (Math.random() * 255) | 0;
-    img.data[i] = v;
-    img.data[i + 1] = v;
-    img.data[i + 2] = v;
-    img.data[i + 3] = (alpha * 255) | 0;
-  }
-  ctx.putImageData(img, 0, 0);
-}
-
 function createLabelTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = 2048;
@@ -65,9 +53,15 @@ function createLabelTexture() {
   ctx.font = '600 36px Figtree, Arial, sans-serif';
   ctx.fillText('EST. BATCH 08  ·  GRASS FED', 1024, 1280);
 
-  ctx.globalCompositeOperation = 'overlay';
-  createNoise(ctx, 2048, 2048, 0.06);
-  ctx.globalCompositeOperation = 'source-over';
+  // Soft grain without destroying the painted label (putImageData would wipe it)
+  const grain = ctx.getImageData(0, 0, 2048, 2048);
+  for (let i = 0; i < grain.data.length; i += 4) {
+    const n = (Math.random() * 18 - 9) | 0;
+    grain.data[i] = Math.min(255, Math.max(0, grain.data[i] + n));
+    grain.data[i + 1] = Math.min(255, Math.max(0, grain.data[i + 1] + n));
+    grain.data[i + 2] = Math.min(255, Math.max(0, grain.data[i + 2] + n));
+  }
+  ctx.putImageData(grain, 0, 0);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
